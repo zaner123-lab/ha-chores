@@ -1,0 +1,51 @@
+# Example Lovelace view for the chores entities.
+# Drop into your dashboard YAML, or copy the cards block via UI > Edit Dashboard.
+
+views:
+  - title: Chores
+    path: chores
+    icon: mdi:broom
+    cards:
+      # Quick link into the add-on UI (the add-on shows in the sidebar by default,
+      # but a card link is convenient on a tablet wall display).
+      - type: button
+        name: Open Chores App
+        icon: mdi:format-list-checkbox
+        tap_action:
+          action: navigate
+          navigation_path: /hassio/ingress/chores
+        show_state: false
+
+      # Per-kid progress: bar showing effort / threshold
+      - type: vertical-stack
+        cards:
+          - type: markdown
+            content: "## Today"
+
+          - type: gauge
+            entity: sensor.chores_sam_effort_today
+            name: Sam — effort
+            unit: pts
+            min: 0
+            max: 15
+            severity:
+              green: 10
+              yellow: 5
+              red: 0
+
+          - type: entities
+            title: Sam
+            entities:
+              - entity: sensor.chores_sam_remaining
+                name: Chores remaining today
+              - entity: sensor.chores_sam_reward_today
+                name: Reward earned today
+              - entity: binary_sensor.chores_sam_allowance_earned
+                name: Allowance earned
+
+      # Global open chores
+      - type: glance
+        title: Up for grabs
+        entities:
+          - entity: sensor.chores_open_remaining
+            name: Open chores left

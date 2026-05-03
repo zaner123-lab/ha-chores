@@ -1,0 +1,34 @@
+name: Household Chores
+version: "0.1.0"
+slug: chores
+description: Family chore tracking with rewards, allowances, and HA entity exposure via MQTT
+arch:
+  - amd64
+  - aarch64
+  - armv7
+init: false
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:broom
+panel_title: Chores
+panel_admin: false
+hassio_api: true
+hassio_role: default
+homeassistant_api: true
+auth_api: true
+services:
+  - mqtt:need
+map:
+  - addon_config:rw
+options:
+  log_level: info
+  reset_time: "04:00"
+  currency_symbol: "$"
+  mqtt_discovery_prefix: homeassistant
+  mqtt_state_prefix: chores
+schema:
+  log_level: list(trace|debug|info|notice|warning|error|fatal)?
+  reset_time: match(^([01][0-9]|2[0-3]):[0-5][0-9]$)
+  currency_symbol: str
+  mqtt_discovery_prefix: str
+  mqtt_state_prefix: str

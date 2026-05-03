@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block title %}Admin{% endblock %}
+
+{% block content %}
+<div class="admin-grid">
+
+  {# ===================== USERS ===================== #}
+  <section class="card">
+    <h2 class="card__title">Family</h2>
+
+    <table class="table">
+      <thead>
+        <tr><th>Name</th><th>Type</th><th>Allowance</th><th>Threshold</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>
+            <span class="dot" style="background: {{ u.color }}"></span>
+            {{ u.name }}
+          </td>
+          <td>{{ 'Kid' if u.is_kid else 'Adult' }}</td>
+          <td>{% if u.is_kid %}{{ currency }}{{ '%.2f'|format(u.allowance_amount) }}{% else %}—{% endif %}</td>
+          <td>{% if u.is_kid %}{{ u.allowance_threshold }} pts{% else %}—{% endif %}</td>
+          <td class="row-actions">
+            <details>
+              <summary class="link">Edit</summary>
+              <form method="post" action="admin/users/{{ u.id }}" class="form form--inline">
+                <label>Name <input name="name" value="{{ u.name }}" required></label>
+                <label class="form__check">
+                  <input type="checkbox" name="is_kid" {% if u.is_kid %}checked{% endif %}> Is a kid
+                </label>
+                <label>Color <input type="color" name="color" value="{{ u.color }}"></label>
+                <label>Allowance ({{ currency }}) <input type="number" step="0.01" name="allowance_amount" value="{{ u.allowance_amount }}"></label>
+                <label>Threshold (pts) <input type="number" name="allowance_threshold" value="{{ u.allowance_threshold }}"></label>
+                <div class="form__row">
+                  <button class="btn btn--primary" type="submit">Save</button>
+                </div>
+              </form>
+              <form method="post" action="admin/users/{{ u.id }}/delete" onsubmit="return confirm('Delete {{ u.name }}? Their completion history will also be removed.');">
+                <button class="btn btn--danger" type="submit">Delete user</button>
+              </form>
+            </details>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <details class="add-block">
+      <summary class="btn btn--primary">+ Add person</summary>
+      <form method="post" action="admin/users" class="form">
+        <label>Name <input name="name" required></label>
+        <label class="form__check">
+          <input type="checkbox" name="is_kid"> Is a kid (gets allowance tracking)
+        </label>
+        <label>Color <input type="color" name="color" value="#7c9cff"></label>
+        <label>Allowance amount ({{ currency }}) <input type="number" step="0.01" name="allowance_amount" value="0"></label>
+        <label>Allowance threshold (effort points/day) <input type="number" name="allowance_threshold" value="10"></label>
+        <div class="form__row">
+          <button class="btn btn--primary" type="submit">Create</button>
+        </div>
+      </form>
+    </details>
+  </section>
+
+  {# ===================== CHORES ===================== #}
+  <section class="card">
+    <h2 class="card__title">Chores</h2>
+
+    <table class="table">
+      <thead>
+        <tr><th>Name</th><th>Effort</th><th>Reward</th><th>Frequency</th><th>Assignment</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for c in chores %}
+        <tr>
+          <td>
+            {{ c.name }}
+            {% if not c.active %}<span class="muted">(inactive)</span>{% endif %}
+          </td>
+          <td>{{ c.effort }} pt{{ '' if c.effort == 1 else 's' }}</td>
+          <td>{% if c.reward_amount > 0 %}{{ currency }}{{ '%.2f'|format(c.reward_amount) }}{% else %}—{% endif %}</td>
+          <td>{{ c.frequency_type }}{% if c.frequency_data %} ({{ c.frequency_data }}){% endif %}</td>
+          <td>
+            {% if c.assignment_type == 'open' %}
+              Anyone
+            {% else %}
+              {% set names = [] %}
+              {% for u in users if u.id in c.assigned_user_ids %}
+                {% set _ = names.append(u.name) %}
+              {% endfor %}
+              {{ names|join(', ') if names else '— (no users selected)' }}
+            {% endif %}
+          </td>
+          <td class="row-actions">
+            <details>
+              <summary class="link">Edit</summary>
+              {{ m.chore_form(c, users, currency) }}
+              <form method="post" action="admin/chores/{{ c.id }}/delete" onsubmit="return confirm('Delete chore {{ c.name }}?');">
+                <button class="btn btn--danger" type="submit">Delete chore</button>
+              </form>
+            </details>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <details class="add-block">
+      <summary class="btn btn--primary">+ Add chore</summary>
+      {{ m.chore_form(none, users, currency) }}
+    </details>
+  </section>
+
+</div>
+{% endblock %}
