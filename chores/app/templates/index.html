@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Today's Chores{% endblock %}
+
+{% block content %}
+<section class="datebar">
+  <a class="datebar__nav" href="?d={{ prev_date }}" aria-label="Previous day">‹</a>
+  <div class="datebar__center">
+    <div class="datebar__label">{% if is_today %}Today{% else %}{{ on_date.strftime('%A') }}{% endif %}</div>
+    <div class="datebar__date">{{ on_date.strftime('%B %d, %Y') }}</div>
+  </div>
+  <a class="datebar__nav" href="?d={{ next_date }}" aria-label="Next day">›</a>
+</section>
+
+{# ----- Open chores (anyone can claim) ----- #}
+{% if open_chores %}
+<section class="block">
+  <h2 class="block__title">Up for grabs</h2>
+  <p class="block__sub">Anyone can do these — first to claim gets the credit.</p>
+  <ul class="chore-list">
+    {% for item in open_chores %}
+    <li class="chore {% if item.done_by_user_id %}is-done{% endif %}">
+      <div class="chore__main">
+        <div class="chore__name">{{ item.chore.name }}</div>
+        {% if item.chore.description %}
+          <div class="chore__desc">{{ item.chore.description }}</div>
+        {% endif %}
+        <div class="chore__meta">
+          <span class="pill pill--effort">{{ item.chore.effort }} pt{{ '' if item.chore.effort == 1 else 's' }}</span>
+          {% if item.chore.reward_amount > 0 %}
+            <span class="pill pill--reward">{{ currency }}{{ '%.2f'|format(item.chore.reward_amount) }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="chore__actions">
+        {% if item.done_by_user_id %}
+          <div class="done-by">Done by <strong>{{ item.done_by_name }}</strong></div>
+          <form method="post" action="uncomplete">
+            <input type="hidden" name="chore_id" value="{{ item.chore.id }}">
+            <input type="hidden" name="user_id" value="{{ item.done_by_user_id }}">
+            <input type="hidden" name="due_date" value="{{ on_date.isoformat() }}">
+            <button class="btn btn--ghost" type="submit">Undo</button>
+          </form>
+        {% else %}
+          <details class="claim">
+            <summary class="btn btn--primary">Claim</summary>
+            <div class="claim__menu">
+              {% for u in users %}
+              <form method="post" action="complete">
+                <input type="hidden" name="chore_id" value="{{ item.chore.id }}">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <input type="hidden" name="due_date" value="{{ on_date.isoformat() }}">
+                <button class="btn btn--user" style="--user-color: {{ u.color }}" type="submit">{{ u.name }}</button>
+              </form>
+              {% endfor %}
+            </div>
+          </details>
+        {% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{# ----- Per-user assigned chores ----- #}
+{% for user in users %}
+  {% set user_chores = chores_by_user[user.id] %}
+  {% if user_chores or user.is_kid %}
+  <section class="block">
+    <header class="user-head" style="--user-color: {{ user.color }}">
+      <div class="user-head__name">{{ user.name }}</div>
+      {% if user.is_kid %}
+      <div class="user-head__stats">
+        <div class="stat">
+          <div class="stat__value">{{ stats[user.id].effort }}</div>
+          <div class="stat__label">/ {{ user.allowance_threshold }} pts</div>
+        </div>
+        {% if user.allowance_amount > 0 %}
+        <div class="stat stat--allowance {% if stats[user.id].threshold_met %}is-earned{% endif %}">
+          <div class="stat__value">{{ currency }}{{ '%.2f'|format(user.allowance_amount) }}</div>
+          <div class="stat__label">{% if stats[user.id].threshold_met %}earned ✓{% else %}allowance{% endif %}</div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </header>
+
+    {% if user_chores %}
+    <ul class="chore-list">
+      {% for item in user_chores %}
+      <li class="chore {% if item.done %}is-done{% endif %}">
+        <div class="chore__main">
+          <div class="chore__name">{{ item.chore.name }}</div>
+          {% if item.chore.description %}
+            <div class="chore__desc">{{ item.chore.description }}</div>
+          {% endif %}
+          <div class="chore__meta">
+            <span class="pill pill--effort">{{ item.chore.effort }} pt{{ '' if item.chore.effort == 1 else 's' }}</span>
+            {% if item.chore.reward_amount > 0 %}
+              <span class="pill pill--reward">{{ currency }}{{ '%.2f'|format(item.chore.reward_amount) }}</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="chore__actions">
+          {% if item.done %}
+            <form method="post" action="uncomplete">
+              <input type="hidden" name="chore_id" value="{{ item.chore.id }}">
+              <input type="hidden" name="user_id" value="{{ user.id }}">
+              <input type="hidden" name="due_date" value="{{ on_date.isoformat() }}">
+              <button class="btn btn--ghost" type="submit">Undo</button>
+            </form>
+          {% else %}
+            <form method="post" action="complete">
+              <input type="hidden" name="chore_id" value="{{ item.chore.id }}">
+              <input type="hidden" name="user_id" value="{{ user.id }}">
+              <input type="hidden" name="due_date" value="{{ on_date.isoformat() }}">
+              <button class="btn btn--primary" type="submit">Done</button>
+            </form>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty">Nothing assigned today.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+{% endfor %}
+
+{% if not open_chores and not chores_by_user.values()|select|list %}
+<div class="empty-state">
+  <div class="empty-state__icon">✓</div>
+  <div class="empty-state__title">All clear.</div>
+  <div class="empty-state__sub">No chores due {% if is_today %}today{% else %}on this day{% endif %}.</div>
+</div>
+{% endif %}
+{% endblock %}

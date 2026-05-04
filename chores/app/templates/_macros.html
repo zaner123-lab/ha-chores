@@ -1,0 +1,72 @@
+{% macro chore_form(c, users, currency) %}
+{% set action = ('admin/chores/' ~ c.id) if c else 'admin/chores' %}
+<form method="post" action="{{ action }}" class="form chore-form">
+  <label>Name <input name="name" value="{{ c.name if c else '' }}" required></label>
+  <label>Description <textarea name="description" rows="2">{{ c.description if c else '' }}</textarea></label>
+
+  <div class="form__row">
+    <label>Effort (pts) <input type="number" name="effort" value="{{ c.effort if c else 1 }}" min="1"></label>
+    <label>Reward ({{ currency }}) <input type="number" step="0.01" name="reward_amount" value="{{ c.reward_amount if c else 0 }}"></label>
+  </div>
+
+  <fieldset class="fieldset">
+    <legend>Frequency</legend>
+    <div class="form__row form__row--wrap">
+      {% set ftype = c.frequency_type if c else 'daily' %}
+      <label class="form__radio"><input type="radio" name="frequency_type" value="daily" {% if ftype == 'daily' %}checked{% endif %} data-freq="daily"> Daily</label>
+      <label class="form__radio"><input type="radio" name="frequency_type" value="weekly" {% if ftype == 'weekly' %}checked{% endif %} data-freq="weekly"> Weekly</label>
+      <label class="form__radio"><input type="radio" name="frequency_type" value="monthly" {% if ftype == 'monthly' %}checked{% endif %} data-freq="monthly"> Monthly</label>
+      <label class="form__radio"><input type="radio" name="frequency_type" value="interval" {% if ftype == 'interval' %}checked{% endif %} data-freq="interval"> Every N days</label>
+    </div>
+
+    <div class="freq-detail" data-when="weekly">
+      {% set selected_days = (c.frequency_data.split(',') if c and c.frequency_type == 'weekly' and c.frequency_data else []) %}
+      <div class="weekday-row">
+        {% for d, label in [('0','M'),('1','T'),('2','W'),('3','T'),('4','F'),('5','S'),('6','S')] %}
+        <label class="weekday">
+          <input type="checkbox" name="weekdays" value="{{ d }}" {% if d in selected_days %}checked{% endif %}>
+          <span>{{ label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="freq-detail" data-when="monthly">
+      <label>Day of month <input type="number" name="month_day" min="1" max="28" value="{{ c.frequency_data if c and c.frequency_type == 'monthly' else 1 }}"></label>
+    </div>
+
+    <div class="freq-detail" data-when="interval">
+      <label>Repeat every <input type="number" name="interval_days" min="1" value="{{ c.frequency_data if c and c.frequency_type == 'interval' else 3 }}"> days</label>
+    </div>
+  </fieldset>
+
+  <fieldset class="fieldset">
+    <legend>Assignment</legend>
+    {% set atype = c.assignment_type if c else 'open' %}
+    <div class="form__row form__row--wrap">
+      <label class="form__radio"><input type="radio" name="assignment_type" value="open" {% if atype == 'open' %}checked{% endif %} data-assign="open"> Anyone (open)</label>
+      <label class="form__radio"><input type="radio" name="assignment_type" value="specific" {% if atype == 'specific' %}checked{% endif %} data-assign="specific"> Specific people</label>
+    </div>
+    <div class="assign-detail" data-when="specific">
+      <div class="user-checks">
+        {% for u in users %}
+        <label class="user-check">
+          <input type="checkbox" name="assigned_user_ids" value="{{ u.id }}"
+            {% if c and u.id in c.assigned_user_ids %}checked{% endif %}>
+          <span class="dot" style="background: {{ u.color }}"></span>
+          {{ u.name }}
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+  </fieldset>
+
+  <label class="form__check">
+    <input type="checkbox" name="active" {% if c is none or c.active %}checked{% endif %}> Active
+  </label>
+
+  <div class="form__row">
+    <button class="btn btn--primary" type="submit">{{ 'Save changes' if c else 'Create chore' }}</button>
+  </div>
+</form>
+{% endmacro %}
