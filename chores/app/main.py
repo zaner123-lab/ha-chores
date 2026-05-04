@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sqlite3
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -160,13 +161,16 @@ def admin_create_user(
     allowance_amount: float = Form(0),
     allowance_threshold: int = Form(10),
 ):
-    db.create_user(
-        name=name.strip(),
-        is_kid=bool(is_kid),
-        color=color,
-        allowance_amount=allowance_amount,
-        allowance_threshold=allowance_threshold,
-    )
+    try:
+        db.create_user(
+            name=name.strip(),
+            is_kid=bool(is_kid),
+            color=color,
+            allowance_amount=allowance_amount,
+            allowance_threshold=allowance_threshold,
+        )
+    except sqlite3.IntegrityError:
+        raise HTTPException(400, f"A user named '{name.strip()}' already exists.")
     mqtt_client.publish_discovery()
     mqtt_client.publish_all_state()
     return RedirectResponse("/admin", status_code=303)
@@ -181,14 +185,17 @@ def admin_update_user(
     allowance_amount: float = Form(0),
     allowance_threshold: int = Form(10),
 ):
-    db.update_user(
-        user_id=user_id,
-        name=name.strip(),
-        is_kid=bool(is_kid),
-        color=color,
-        allowance_amount=allowance_amount,
-        allowance_threshold=allowance_threshold,
-    )
+    try:
+        db.update_user(
+            user_id=user_id,
+            name=name.strip(),
+            is_kid=bool(is_kid),
+            color=color,
+            allowance_amount=allowance_amount,
+            allowance_threshold=allowance_threshold,
+        )
+    except sqlite3.IntegrityError:
+        raise HTTPException(400, f"Another user is already named '{name.strip()}'.")
     mqtt_client.publish_discovery()
     mqtt_client.publish_all_state()
     return RedirectResponse("/admin", status_code=303)
